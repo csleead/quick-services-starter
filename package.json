@@ -6,6 +6,7 @@
   "private": true,
   "scripts": {
     "start": "npx ts-node src/index.ts",
+    "start:sample": "npx ts-node src/index.ts sample-app/sample.yaml",
     "lint": "npx eslint ./src --ext .ts"
   },
   "engines": {
@@ -21,6 +22,7 @@
   },
   "dependencies": {
     "winston": "^3.6.0",
+    "yaml": "^1.10.2",
     "zod": "^3.11.6"
   }
 }
