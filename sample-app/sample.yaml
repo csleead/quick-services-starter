@@ -1,0 +1,10 @@
+long-running-app:
+  cwd: ./
+  script: |
+    #!/bin/bash
+    npx ts-node ./sample-app/long-running.ts
+short-running-app:
+  cwd: ./
+  script: |
+    #!/bin/bash
+    npx ts-node ./sample-app/short-running.ts
