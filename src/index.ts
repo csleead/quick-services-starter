@@ -15,7 +15,7 @@ import { ConfigSchema } from './config';
     transports: [
       new transports.Console(),
       new transports.File({
-        filename: join(loggingDir, `qss-${new Date().toISOString()}.log`),
+        filename: join(loggingDir, 'qss.log'),
       }),
     ]
   });
