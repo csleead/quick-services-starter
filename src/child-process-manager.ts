@@ -1,20 +1,30 @@
 import { ChildProcess, spawn } from 'child_process';
 import { writeFile } from 'fs/promises';
+import { createWriteStream, WriteStream } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { Logger } from 'winston';
 import { Config } from './config';
+import { Logger } from 'winston';
+
+interface ChildProcessContext {
+  process: ChildProcess;
+  loggingStream: WriteStream;
+  exited: boolean;
+}
 
 export class ChildProcessManager {
-  private readonly _childProcesses: ChildProcess[] = [];
+  private readonly _childProcessesContexts: ChildProcessContext[] = [];
 
-  public constructor(private readonly _config: Config, private readonly _logger: Logger) {
+  public constructor(private readonly _config: Config, private readonly _logger: Logger, private readonly _loggingDir: string) {
   }
 
   public async start(): Promise<void> {
-    for(const [key, value] of Object.entries(this._config)) {
+    for (const [key, value] of Object.entries(this._config)) {
+      const logFilePath = join(this._loggingDir, `${key}.log`);
+      const logStream = createWriteStream(logFilePath, { flags: 'a' });
+
       this._logger.info(`Starting service ${key}`);
-      
+
       const tempScriptFile = randFilePath(key);
       await writeFile(tempScriptFile, value.script);
 
@@ -22,37 +32,48 @@ export class ChildProcessManager {
         cwd: value.cwd,
         shell: true,
       });
+
+      const context: ChildProcessContext = {
+        process: childProcess,
+        loggingStream: logStream,
+        exited: false,
+      };
+
       childProcess.stdout.on('data', (data: Buffer) => {
         const s = data.toString().trimEnd();
-        this._logger.info(s, { service: key });
+        logStream.write(`[STDOUT] ${s}\n`);
       });
       childProcess.stderr.on('data', (data: Buffer) => {
         const s = data.toString().trimEnd();
-        this._logger.error(s, { service: key });
+        logStream.write(`[STDERR] ${s}\n`);
       });
-      childProcess.on('close', (code) => {
+      childProcess.on('exit', (code) => {
         this._logger.info(`Exited with code ${code}`, { service: key });
+        logStream.write(`[QSS] Service exited with code ${code}\n`);
+        context.exited = true;
       });
 
-      this._childProcesses.push(childProcess);
+      this._childProcessesContexts.push(context);
     }
   }
 
   public async stop(): Promise<void> {
-    const exitPromises = [];
-    for (const childProcess of this._childProcesses.filter(cp => !cp.exitCode)) {
-      exitPromises.push(new Promise<void>((resolve) => {
-        childProcess.on('close', () => resolve());
-      }));
-
-      childProcess.kill('SIGINT');
+    for (const ctx of this._childProcessesContexts.filter(ctx => !ctx.exited)) {
+      ctx.process.kill('SIGINT');
     }
 
-    await Promise.all(exitPromises);
+    while (this._childProcessesContexts.some(ctx => !ctx.exited)) {
+      await sleep(1000);
+    }
   }
 }
 
+async function sleep(ms: number): Promise<void> {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
-function randFilePath(serviceName: string) : string {
+function randFilePath(serviceName: string): string {
   return join(tmpdir(), `${serviceName}-${Math.random().toString(36)}.sh`);
 }
