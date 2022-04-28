@@ -47,15 +47,15 @@ export class ChildProcessManager {
           context.isReady = true;
           this._logger.info(`Service ${key} is now ready`);
         }
-        logStream.write(`[STDOUT] ${s}\n`);
+        logStream.write(`[${new Date().toISOString()}][STDOUT] ${s}\n`);
       });
       childProcess.stderr.on('data', (data: Buffer) => {
         const s = data.toString().trimEnd();
-        logStream.write(`[STDERR] ${s}\n`);
+        logStream.write(`[${new Date().toISOString()}][STDERR] ${s}\n`);
       });
       childProcess.on('exit', (code) => {
         this._logger.info(`Exited with code ${code}`, { service: key });
-        logStream.write(`[QSS] Service exited with code ${code}\n`);
+        logStream.write(`[${new Date().toISOString()}][QSS] Service exited with code ${code}\n`);
         context.exited = true;
       });
 

@@ -11,7 +11,10 @@ import { ConfigSchema } from './config';
   await mkdir(loggingDir, { recursive: true });
 
   const logger = createLogger({
-    format: format.json(),
+    format: format.combine(
+      format.timestamp(),
+      format.json(),
+    ),
     transports: [
       new transports.Console(),
       new transports.File({
