@@ -3,6 +3,7 @@ long-running-app:
   script: |
     #!/bin/bash
     npx ts-node ./sample-app/long-running.ts
+  readyText: Ping
 short-running-app:
   cwd: ./
   script: |

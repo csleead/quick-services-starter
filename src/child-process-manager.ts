@@ -9,6 +9,7 @@ import { Logger } from 'winston';
 interface ChildProcessContext {
   process: ChildProcess;
   loggingStream: WriteStream;
+  isReady: boolean;
   exited: boolean;
 }
 
@@ -36,11 +37,16 @@ export class ChildProcessManager {
       const context: ChildProcessContext = {
         process: childProcess,
         loggingStream: logStream,
+        isReady: value.readyText === undefined,
         exited: false,
       };
 
       childProcess.stdout.on('data', (data: Buffer) => {
         const s = data.toString().trimEnd();
+        if(!context.isReady && value.readyText && s.includes(value.readyText)) {
+          context.isReady = true;
+          this._logger.info(`Service ${key} is now ready`);
+        }
         logStream.write(`[STDOUT] ${s}\n`);
       });
       childProcess.stderr.on('data', (data: Buffer) => {
