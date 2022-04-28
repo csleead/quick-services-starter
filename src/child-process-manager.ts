@@ -54,7 +54,7 @@ export class ChildProcessManager {
         logStream.write(`[${new Date().toISOString()}][STDERR] ${s}\n`);
       });
       childProcess.on('exit', (code) => {
-        this._logger.info(`Exited with code ${code}`, { service: key });
+        this._logger.info(`Service ${key} exited with code ${code}`);
         logStream.write(`[${new Date().toISOString()}][QSS] Service exited with code ${code}\n`);
         context.exited = true;
       });
