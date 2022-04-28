@@ -35,5 +35,6 @@ import { ConfigSchema } from './config';
     logger.info('All services stopped');
 
     logger.end();
+    process.exit(0);
   });
 })();
