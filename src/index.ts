@@ -12,8 +12,8 @@ import { ConfigSchema } from './config';
 
   const logger = createLogger({
     format: format.combine(
-      format.timestamp(),
-      format.json(),
+      format.timestamp({ format: 'YYYY-MM-dd HH:mm:ss' }),
+      format.printf(info => `[${info.timestamp}] ${info.level}: ${info.message}`),
     ),
     transports: [
       new transports.Console(),
