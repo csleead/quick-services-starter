@@ -32,7 +32,13 @@ import { ConfigSchema } from './config';
   const childProcessManager = new ChildProcessManager(config, logger, loggingDir);
   await childProcessManager.start();
 
+  let sigintListenerTriggered = false;
   process.on('SIGINT', async () => {
+    if(sigintListenerTriggered) {
+      return;
+    }
+    sigintListenerTriggered = true;
+
     logger.info('Received SIGINT, stopping services');
     await childProcessManager.stop();
     logger.info('All services stopped');
