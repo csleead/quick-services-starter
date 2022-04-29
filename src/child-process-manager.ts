@@ -5,6 +5,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { Config } from './config';
 import { Logger } from 'winston';
+import { notify } from 'node-notifier';
 
 interface ChildProcessContext {
   process: ChildProcess;
@@ -15,6 +16,7 @@ interface ChildProcessContext {
 
 export class ChildProcessManager {
   private readonly _childProcessesContexts: ChildProcessContext[] = [];
+  private _stopRequested = false;
 
   public constructor(private readonly _config: Config, private readonly _logger: Logger, private readonly _loggingDir: string) {
   }
@@ -57,6 +59,15 @@ export class ChildProcessManager {
         this._logger.info(`Service ${key} exited with code ${code}`);
         logStream.write(`[${new Date().toISOString()}][QSS] Service exited with code ${code}\n`);
         context.exited = true;
+
+        if(!this._stopRequested) {
+          // When a service is exited before requesting it to stop,
+          // it is very likely the service crashed, therefore we send a notification.
+          notify({
+            title: 'QSS: Service exited',
+            message: `Service ${key} exited with code ${code}`,
+          });
+        }
       });
 
       this._childProcessesContexts.push(context);
@@ -64,6 +75,7 @@ export class ChildProcessManager {
   }
 
   public async stop(): Promise<void> {
+    this._stopRequested = true;
     for (const ctx of this._childProcessesContexts.filter(ctx => !ctx.exited)) {
       ctx.process.kill('SIGINT');
     }
