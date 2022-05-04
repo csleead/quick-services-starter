@@ -1,4 +1,3 @@
-import { rejects } from 'assert';
 import { readFile, mkdir } from 'fs/promises';
 import { homedir } from 'os';
 import { join } from 'path';
