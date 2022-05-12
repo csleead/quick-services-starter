@@ -6,6 +6,7 @@ import { join } from 'path';
 import { Config } from './config';
 import { Logger } from 'winston';
 import { notify } from 'node-notifier';
+import { fromEvent, tap, map } from 'rxjs';
 
 interface ChildProcessContext {
   process: ChildProcess;
@@ -43,21 +44,23 @@ export class ChildProcessManager {
         exited: false,
       };
 
-      childProcess.stdout.on('data', (data: Buffer) => {
-        const s = data.toString().trimEnd();
+      const stdout$ = fromEvent(childProcess.stdout, 'data', (data) => (data as Buffer).toString().trimEnd());
+      const stderr$ = fromEvent(childProcess.stderr, 'data', (data) => (data as Buffer).toString().trimEnd());
+      const exit$ = fromEvent(childProcess, 'exit', (code) => code as number);
+
+      stdout$.subscribe(s => logStream.write(`[${new Date().toISOString()}][STDOUT] ${s}\n`));
+      stderr$.subscribe(s => logStream.write(`[${new Date().toISOString()}][STDERR] ${s}\n`));
+      exit$.subscribe(code => logStream.write(`[${new Date().toISOString()}][QSS] Service exited with code ${code}\n`));
+
+      stdout$.subscribe(s => {
         if(!context.isReady && value.readyText && s.includes(value.readyText)) {
           context.isReady = true;
           this._logger.info(`Service ${key} is now ready`);
         }
-        logStream.write(`[${new Date().toISOString()}][STDOUT] ${s}\n`);
       });
-      childProcess.stderr.on('data', (data: Buffer) => {
-        const s = data.toString().trimEnd();
-        logStream.write(`[${new Date().toISOString()}][STDERR] ${s}\n`);
-      });
-      childProcess.on('exit', (code) => {
+
+      exit$.subscribe(code => {
         this._logger.info(`Service ${key} exited with code ${code}`);
-        logStream.write(`[${new Date().toISOString()}][QSS] Service exited with code ${code}\n`);
         context.exited = true;
 
         if(!this._stopRequested) {
