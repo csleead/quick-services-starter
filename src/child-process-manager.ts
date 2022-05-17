@@ -6,7 +6,7 @@ import { join } from 'path';
 import { Config } from './config';
 import { Logger } from 'winston';
 import { notify } from 'node-notifier';
-import { fromEvent, tap, map } from 'rxjs';
+import { fromEvent, map, merge } from 'rxjs';
 
 interface ChildProcessContext {
   process: ChildProcess;
@@ -48,9 +48,12 @@ export class ChildProcessManager {
       const stderr$ = fromEvent(childProcess.stderr, 'data', (data) => (data as Buffer).toString().trimEnd());
       const exit$ = fromEvent(childProcess, 'exit', (code) => code as number);
 
-      stdout$.subscribe(s => logStream.write(`[${new Date().toISOString()}][STDOUT] ${s}\n`));
-      stderr$.subscribe(s => logStream.write(`[${new Date().toISOString()}][STDERR] ${s}\n`));
-      exit$.subscribe(code => logStream.write(`[${new Date().toISOString()}][QSS] Service exited with code ${code}\n`));
+      merge(
+        stdout$.pipe(map(s => `[${new Date().toISOString()}][STDOUT] ${s}\n`)),
+        stderr$.pipe(map(s => `[${new Date().toISOString()}][STDERR] ${s}\n`)),
+        exit$.pipe(map(code => `[${new Date().toISOString()}][QSS] Service exited with code ${code}\n`)),
+      )
+        .subscribe(s => logStream.write(s));
 
       stdout$.subscribe(s => {
         if(!context.isReady && value.readyText && s.includes(value.readyText)) {
