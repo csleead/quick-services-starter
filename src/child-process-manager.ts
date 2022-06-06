@@ -59,6 +59,13 @@ export class ChildProcessManager {
         if(!context.isReady && value.readyText && s.includes(value.readyText)) {
           context.isReady = true;
           this._logger.info(`Service ${key} is now ready`);
+
+          if(this._childProcessesContexts.every(ctx => ctx.isReady)) {
+            notify({
+              title: 'QSS: All service are ready',
+              message: 'QSS: All service are ready'
+            });
+          }
         }
       });
 
